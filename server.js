@@ -10,6 +10,9 @@ const itemsRoutes = require('./routes/items');
 const stockRoutes = require('./routes/stock');
 const reportRoutes = require('./routes/reports');
 const categoryRoutes = require('./routes/categories');
+const workersRoutes = require('./routes/workers');
+const attendanceRoutes = require('./routes/attendance');
+const payrollRoutes = require('./routes/payroll');
 
 
 const app = express();
@@ -78,6 +81,9 @@ app.use('/api/users', usersRoutes);
 app.use('/api/items', itemsRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/workers', workersRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // Health check
 app.get('/', (req, res) => res.send('MALIS-CO Inventory Backend Running'));

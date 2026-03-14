@@ -10,6 +10,10 @@ const itemsRoutes = require('./routes/items');
 const stockRoutes = require('./routes/stock');
 const reportRoutes = require('./routes/reports');
 const categoryRoutes = require('./routes/categories');
+const workersRoutes = require('./routes/workers');
+const attendanceRoutes = require('./routes/attendance');
+const payrollRoutes = require('./routes/payroll');
+const userReportsRoutes = require('./routes/userReports');
 
 
 const app = express();
@@ -39,28 +43,56 @@ const seedRoles = async () => {
 };
 
 // --------------------
-// Seed Default Admin
+// Seed Default Users (Admin + Engineer viewer)
 // --------------------
 const createDefaultAdmin = async () => {
   try {
-    // Get the admin role ID
-    const roleRes = await pool.query("SELECT id FROM roles WHERE name='admin'");
-    if (roleRes.rows.length === 0) {
-      console.error('Admin role not found, cannot create default admin');
-      return;
-    }
-    const adminRoleId = roleRes.rows[0].id;
+    // Get the admin and engineer role IDs
+    const rolesRes = await pool.query(
+      "SELECT id, name FROM roles WHERE name IN ('admin','engineer')"
+    );
+    const adminRole = rolesRes.rows.find(r => r.name === 'admin');
+    const engineerRole = rolesRes.rows.find(r => r.name === 'engineer');
 
-    // Check if admin user exists
-    const userRes = await pool.query("SELECT * FROM users WHERE role_id=$1", [adminRoleId]);
-    if (userRes.rows.length === 0) {
-      const hashedPassword = await bcrypt.hash('EvodeMaliscoltd', 10);
-      await pool.query(
-        `INSERT INTO users (full_name, username, password_hash, role_id)
-         VALUES ($1, $2, $3, $4)`,
-        ['Tuyishime Evode', 'evodemrtn@gmail.com', hashedPassword, adminRoleId]
+    if (!adminRole) {
+      console.error('Admin role not found, cannot create default admin');
+    } else {
+      const adminRoleId = adminRole.id;
+      const adminRes = await pool.query(
+        "SELECT * FROM users WHERE role_id=$1",
+        [adminRoleId]
       );
-      console.log('Default admin created: evodemrtn@gmail.com / EvodeMaliscoltd');
+      if (adminRes.rows.length === 0) {
+        const hashedPassword = await bcrypt.hash('EvodeMaliscoltd', 10);
+        await pool.query(
+          `INSERT INTO users (full_name, username, password_hash, role_id)
+           VALUES ($1, $2, $3, $4)`,
+          ['Tuyishime Evode', 'evodemrtn@gmail.com', hashedPassword, adminRoleId]
+        );
+        console.log('Default admin created: evodemrtn@gmail.com / EvodeMaliscoltd');
+      }
+    }
+
+    if (!engineerRole) {
+      console.error('Engineer role not found, cannot create default engineer viewer');
+    } else {
+      const engineerRoleId = engineerRole.id;
+      const engineerUsername = 'info@maliscoltd.com';
+
+      const existingEngineer = await pool.query(
+        'SELECT * FROM users WHERE username=$1',
+        [engineerUsername]
+      );
+
+      if (existingEngineer.rows.length === 0) {
+        const engineerPasswordHash = await bcrypt.hash('password', 10);
+        await pool.query(
+          `INSERT INTO users (full_name, username, password_hash, role_id)
+           VALUES ($1, $2, $3, $4)`,
+          ['MALISCO View', engineerUsername, engineerPasswordHash, engineerRoleId]
+        );
+        console.log('Default engineer viewer created: info@maliscoltd.com / password');
+      }
     }
   } catch (err) {
     console.error('Error creating default admin:', err.message);
@@ -78,6 +110,10 @@ app.use('/api/users', usersRoutes);
 app.use('/api/items', itemsRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/user/reports', userReportsRoutes);
+app.use('/api/workers', workersRoutes);
+app.use('/api/attendance', attendanceRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // Health check
 app.get('/', (req, res) => res.send('MALIS-CO Inventory Backend Running'));
